@@ -8,9 +8,9 @@ export async function registerUser(req, res, next) {
     const { email, password } = req.body;
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const findedUser = await User.findOne({ email });
+    const foundUser = await User.findOne({ email });
 
-    if (findedUser) {
+    if (foundUser) {
       throw createError(409, "This email already used");
     }
 
@@ -29,25 +29,29 @@ export async function loginUser(req, res, next) {
   try {
     const { email, password } = req.body;
 
-    const findedUser = await User.findOne({ email });
+    const foundUser = await User.findOne({ email });
 
-    if (!findedUser) {
+    if (!foundUser) {
       throw createError(400, "Email or Password is wrong");
     }
 
-    const isMatch = await bcrypt.compare(password, findedUser.password);
+    const isMatch = await bcrypt.compare(password, foundUser.password);
 
     if (!isMatch) {
       throw createError(400, "Email or Password is wrong");
     }
 
-    const token = jwt.sign({ id: findedUser._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: foundUser._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
 
-    const user = await User.findByIdAndUpdate(findedUser._id, {
-      token,
-    }).select({ password: 0, updatedAt: 0, createdAt: 0 });
+    const user = await User.findByIdAndUpdate(
+      foundUser._id,
+      {
+        token,
+      },
+      { new: true }
+    ).select({ password: 0, updatedAt: 0, createdAt: 0 });
     res.status(200).json(user);
   } catch (error) {
     next(error);
